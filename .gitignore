@@ -12,3 +12,6 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Sensitive files
+db/fir-101-e0467-firebase-adminsdk-eh99l-9315838885.json
