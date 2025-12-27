@@ -1,13 +1,12 @@
 require('dotenv').config();
 const { Pinecone } = require('@pinecone-database/pinecone');
 
-if (!process.env.PINECONE_API_KEY || !process.env.PINECONE_ENVIRONMENT) {
-  throw new Error('Pinecone environment or api key variables are missing');
+if (!process.env.PINECONE_API_KEY) {
+  throw new Error('Pinecone api key variable is missing');
 }
 
 const pinecone = new Pinecone({
   apiKey: process.env.PINECONE_API_KEY,
-  environment: process.env.PINECONE_ENVIRONMENT,
 });
 
 /**
@@ -17,13 +16,17 @@ const pinecone = new Pinecone({
  */
 async function initIndex(indexName) {
   const indexList = await pinecone.listIndexes();
-  if (!indexList.includes(indexName)) {
+  if (!indexList.indexes.some(index => index.name === indexName)) {
     await pinecone.createIndex({
-      createRequest: {
-        name: indexName,
-        dimension: 1536, // Example dimension, adjust as needed
-        metric: 'cosine', // Example metric, adjust as needed
-      },
+      name: indexName,
+      dimension: 768,
+      metric: 'cosine',
+      spec: {
+        serverless: {
+          cloud: 'aws',
+          region: 'us-east-1'
+        }
+      }
     });
   }
   return pinecone.Index(indexName);
@@ -35,7 +38,7 @@ async function initIndex(indexName) {
  * @param {Array<object>} vectors - An array of vectors to upsert.
  */
 async function upsertVectors(index, vectors) {
-  await index.upsert({ upsertRequest: { vectors } });
+  await index.upsert(vectors);
 }
 
 /**
@@ -47,12 +50,10 @@ async function upsertVectors(index, vectors) {
  */
 async function queryVectors(index, vector, topK) {
   const results = await index.query({
-    queryRequest: {
-      vector,
-      topK,
-      includeValues: false,
-      includeMetadata: true,
-    },
+    vector,
+    topK,
+    includeValues: false,
+    includeMetadata: true,
   });
   return results;
 }
