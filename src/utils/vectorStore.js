@@ -19,7 +19,7 @@ async function initIndex(indexName) {
   if (!indexList.indexes.some(index => index.name === indexName)) {
     await pinecone.createIndex({
       name: indexName,
-      dimension: 768,
+      dimension: 384,
       metric: 'cosine',
       spec: {
         serverless: {

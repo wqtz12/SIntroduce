@@ -1,24 +1,27 @@
 require('dotenv').config();
-const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-// The dimension for Google's embedding-001 model
-const EMBEDDING_DIMENSION = 768;
+// The dimension for the all-MiniLM-L6-v2 model
+const EMBEDDING_DIMENSION = 384;
 
-let genAI;
+let extractorPromise;
 
-function getGoogleAI() {
-  if (!genAI) {
-    const apiKey = process.env.GOOGLE_API_KEY;
-    if (!apiKey) {
-      throw new Error('GOOGLE_API_KEY is not set in your environment.');
-    }
-    genAI = new GoogleGenerativeAI(apiKey);
+async function getExtractor() {
+  if (!extractorPromise) {
+    extractorPromise = new Promise(async (resolve, reject) => {
+      try {
+        const { pipeline } = await import('@xenova/transformers');
+        const extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
+        resolve(extractor);
+      } catch (error) {
+        reject(error);
+      }
+    });
   }
-  return genAI;
+  return extractorPromise;
 }
 
 /**
- * Creates an embedding for a given text using Google's Generative AI.
+ * Creates an embedding for a given text using Hugging Face transformers.
  * @param {string} text - The text to embed.
  * @returns {Promise<Array<number>>} - A promise that resolves to the embedding vector.
  */
@@ -30,12 +33,10 @@ async function embedText(text) {
     return dummyVector;
   }
 
-  // --- Google Model ---
-  const client = getGoogleAI();
-  const model = client.getGenerativeModel({ model: "embedding-001"});
-  const result = await model.embedContent(text);
-  const embedding = result.embedding;
-  return embedding.values;
+  // --- Hugging Face Model ---
+  const extractor = await getExtractor();
+  const result = await extractor(text, { pooling: 'mean', normalize: true });
+  return Array.from(result.data);
 }
 
 module.exports = {
